@@ -10,3 +10,4 @@ What was added to Basic Ben was:
 - With a game running the need for sound became obvious. I then developed a sound card, which went through several stages. I received a lot of support from Rich on programming the AY-3-8910. His old website     contains most of his work (https://rehsd1.wixsite.com/my-site/blog).  
    
 **The Basic 6502**    
+<img src="https://github.com/user-attachments/assets/6b0e4e2a-882f-4b98-b962-2dac7901bc73" alt="Alt-Text" width="300" height="200">
