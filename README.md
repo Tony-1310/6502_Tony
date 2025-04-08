@@ -37,14 +37,14 @@ The image shows the starting point in breadboard form with the Arduino 2560 in p
 <img src="https://github.com/user-attachments/assets/adf35fd1-1185-452a-bac7-a89626010274" alt="Alt-Text" width="300" height="200">
 
 I had limited experience with PCB´s before making this one. A few takeaways may be appropriate.
-- This board is quite large measuring 320x220 mm. It is also 4 layers, this combination making it expensive. I attribute this to adding layers when running into problems connecting components (can´t cross in the same layer) and only later learned how to use via´s to avoid this problem. In addition I did not exploit the minimum distances allowed by the software (Kicad)  which would give a more compact boaard.
+- This board is quite large measuring 320x220 mm. It is also 4 layers, this combination making it expensive. I attribute this to adding layers when running into problems connecting components (can´t cross in the same layer) and only later learned how to use via´s to avoid this problem. In addition I did not exploit the minimum distances allowed by the software (Kicad)  which would give a more compact board.
 - I should have given more thought to the positioning of components. As an example, by the time I had reached the stage of ordering the PCB, it had become clear that I wanted  to replace the LCD with a TFT display to be able to run games as mentioned above. Looking at the hardware requirements I realised that I could use the same pin connector (bottom left) as I had already designed for the LCD display and just map the PCB for the TFT display accordingly. I therefore used the PCB layout already designed for the LCD. This was a mistake as the the TFT screen was then right in front of the pushbuttons used to control the game which is not ideal.
 - There was enough space on the board to add connections for the sound card which had become desirable because of running the game. This can be seen on the right.
 
 **Testing**
 
 I designed and ordered the PCB´s for the LCD display and TFT display shortly after the main board and was soon able to test the basic 6502 as well as the TFT enhancement. A few comments:
-- I was delighted that the PCB functioned as designed without the quirks experienced with the breadboard version. I struggled to get the RS-232 interface to work and eventually found that one of the capacitors forming part of the MAX 232 circuitry was grounded to an island. I was able to correct it underneath the board. The point of this discussion is to remind the reader to examine the PCB layout in KICAD caarefully for this. They are not easy to spot. I also struggled with the terminal programs, trying several. The one that worked most reliably for me (and easiest to understand) was TeraTerm.
+- I was delighted that the PCB functioned as designed without the quirks experienced with the breadboard version. I struggled to get the RS-232 interface to work and eventually found that one of the capacitors forming part of the MAX 232 circuitry was grounded to an island. I was able to correct it underneath the board. The point of this discussion is to remind the reader to examine the PCB layout in Kicad carefully for this. They are not easy to spot. I also struggled with the terminal programs, trying several. The one that worked most reliably for me (and easiest to understand) was TeraTerm.
 - The pin connections for the displays worked but using pin connections proved to be inadequate from a stability point of view. I found a way to stabilise them but was not satified with this arrangement. I decided to go for edge connectors. I eventually found suitable ones from Samtec and as these are not run of the mill (single row, 2.54 pitch) it took several weeks before they were available. Not having had success removing multi-pin IC´s from a PCB I had to start all over, the extra boards resulting from the PCB manufacturer´s minimum order policy coming in handy.
 
 **Sound**
@@ -57,7 +57,61 @@ I then modified the setup so that the total project looked like this (not all co
    - VIA1 to receive input from the pushbuttons, and trigger interrupts on 6502M
 - Sound Card
    - 6502S to run the music program
-   - EEPROM to contaain the music code
+   - EEPROM to contain the music code
    - VIA2 to receive data from the game code which would be used to select the track to be played by 6502S
    - VIA3 to operate in handshake mode with VIA2. It would read the track information on VIA2 and trigger an interrupt on 6502S
-   - VIA4 would output the code to the AY-3-8910 which would generate the sound     
+   - VIA4 would output the code to the AY-3-8910 which would generate the sound
+
+  The sound card is shown below.
+
+ <img src="https://github.com/user-attachments/assets/6a106295-9c4a-4290-84de-59ce71cc7608" alt="Alt-Text" width="300" height="200">
+ 
+It is smaller than the main board despite having more major components due to compact spacing of the traces and only 2 layers by making extensive use of via´s. However it became obvious that even with an edge connector it would be difficult to keep it stable vertical to the main board and would look ugly. To overcome this it would be necessary to build a case for both components and find a new way to connect the two. The sound card could then be positioned below the main board.
+
+**The Case**
+
+The case is shown below.
+
+ <img src="https://github.com/user-attachments/assets/f1ebfbc7-1246-4f4e-8f8d-61eab7e93eba" alt="Alt-Text" width="300" height="200">
+ 
+This was designed using FreeCad. Having not tried this before it was quite challenging and I found the software hard to work with. I found it hard to correct mistakes and the best way seemed to be starting again. As orientation, the bottom of the image is the front of the case which also has the holes to allow sound out from the speaker. The slot at the other end was a necessary add-on for a separate PCB. This was required to mount the EEPROM to avoid having to dig into the case to remove it for programming. It also allowed for repositioning of the TFT display away from the pushbuttons, and for mounting the volume control. This PCB had to be connected to the main board using ribbon connectors. Another note on not thinking things through. The sound card design was completed at the point of using the edge connector. On changing this to a pin connector the order of the pins should have been reversed (hard to explain). This could be solved by installing the card upside-down as shown below.
+
+<img src="https://github.com/user-attachments/assets/56f5d6ff-94eb-44b6-884a-d3892e595d71" alt="Alt-Text" width="300" height="200">
+
+A comment on the manufacturing of the case. The only fault on the part of the manufacturer was that the front outer dimension was 1 mm less than design. The tolerance that I had allowed was insufficient so that the main board fitted with some difficulty.
+
+**The coding**
+
+As mentioned previously I used the code for the game from Mienczakowski, obviously a skilled programmer. I am not. In order to understand the code better and be able to change things I started trying to simplify things. He had all the code for placing and moving players inside the IRQ handler, which made it very long and hard to retain an overview. I had read somewhere that IRQ handlers should be short. I took all of this out so that the IRQ handler set flags which were acted upon in the main program. I also completely rewrote the code for the movement of Clemo the cat. The existing code allowed for movement only depending on if the player was far or near leading to some strange behaviour. The revised code took into account distance, relative position (eg below, to the left of the player etc), and overcoming obstacles.
+
+The music coding started with the coding from Rich´s videos. The code basically uses pointers to establish the location in memory of a note or notes and then uses subroutines to prepare the PSG and write the data to the different registers. This would look something like this.
+
+- lda #<SND_TONE_E6_FLAT_A
+- sta TUNE_PTR_LO
+- lda #>SND_TONE_E6_FLAT_A
+- sta TUNE_PTR_HI
+- jsr AY1_PlayTune
+
+- *************** delay 3 ticks ***************
+- jsr Delay
+- jsr Delay
+- jsr Delay
+  
+The values which would be loaded to the PSG registers would be in memory as below:
+
+- SND_TONE_E6_FLAT_A:
+- .BYTE $00, $64            ;ChanA tone period fine tune
+- .BYTE $01, $00           ;ChanA tone period coarse tune
+- .BYTE $08, $0F           ;ChanA amplitude    0F = fixed, max
+- .BYTE $FF, $FF           ; EOF
+
+This worked but was rather cmbersome. Changing a note, which channel to play it on, or any other value for the 16 registers of the PSG required rewriting both parts of such a combination. I came up with the idea that this could be dealt within an array which would include the midi number of the note, the channel, the volume and duration, and this could be expanded as desired. The code would then cycle through this array and write the data to the PSG. 
+
+I should note that ChatGPT was very helpful in developing these programs. While their proposed coding was often too complicated or even wrong, it was helpful to understand concepts and exchange ideas.
+
+**Conclusion**
+
+I spent much more time than intended on this project but learnt a lot. It was a mixture of rewarding and sometimes long periods of frustration. I hope some of the lessons learned can help others.
+
+
+
